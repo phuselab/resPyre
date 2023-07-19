@@ -151,6 +151,18 @@ class MTTS_CAN(MethodBase):
 		_, resp = predict_vitals(data['video_path'], batch_size=self.batch_size, plot=False)
 		return resp
 
+class BigSmall(MethodBase):
+	def __init__(self):
+		super().__init__()
+		self.name = 'BigSmall'
+		self.data_type = 'video'
+
+	def process(self, data):
+		from deep.BigSmall.predict_vitals import predict_vitals
+
+		resp = predict_vitals(data['video_path'])
+		return resp
+
 # Motion based
 
 class OF_Deep(MethodBase):
@@ -470,7 +482,7 @@ def main(argv):
 		methods = [peak(), morph(), bss_ssa(), bss_emd()]
 
 		# Initialize a list of datasets
-		datasets = [COHFACE(), BP4D()]
+		datasets = [COHFACE()]
 
 		extract_respiration(datasets, methods, results_dir)
 
