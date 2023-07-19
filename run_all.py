@@ -479,7 +479,8 @@ def main(argv):
 	if what == 0: 
 
 		# Initialize a list of methods
-		methods = [peak(), morph(), bss_ssa(), bss_emd()]
+		#methods = [peak(), morph(), bss_ssa(), bss_emd()]
+		methods = [BigSmall()]
 
 		# Initialize a list of datasets
 		datasets = [COHFACE()]

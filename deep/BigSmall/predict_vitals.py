@@ -1,8 +1,8 @@
 import torch
-from BigSmall import BigSmall
+from .BigSmall import BigSmall
 import numpy as np
 import cv2
-from preprocess import preprocess_frames, extract_raw
+from .preprocess import preprocess_frames, extract_raw
 import os
 from scipy import signal
 from scipy.signal import butter, filtfilt
@@ -80,7 +80,7 @@ def predict_vitals(videoFileName):
     """ Model evaluation on the testing dataset."""
     print("\n=== Loading pretrained weights ===\n")
 
-    model_path = "checkpoints/BP4D_BigSmall_Multitask_Fold1.pth"
+    model_path = "deep/BigSmall/checkpoints/BP4D_BigSmall_Multitask_Fold1.pth"
     print("Testing uses pretrained model!")
     print('Model path:', model_path)
     if not os.path.exists(model_path):
@@ -113,7 +113,7 @@ def predict_vitals(videoFileName):
 
     return resp_out
 
-
+'''
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -154,3 +154,4 @@ if __name__ == "__main__":
     plt.xlim([0,maxF+0.5])
     plt.title("RR: "+str(round(RR,2))+" resp/min")
     plt.show()
+'''
