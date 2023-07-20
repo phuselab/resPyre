@@ -4,6 +4,7 @@ from skimage.util import img_as_float
 import math
 from tqdm import tqdm
 
+
 def resize(frames, dynamic_det, det_length,
             w, h, larger_box, crop_face, larger_box_size):
     """
@@ -73,18 +74,39 @@ def extract_raw(videoFileName):
             frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))   # convert to RGB
     return np.array(frames)
 
-def downsample_frame(frame, dim_h=144, dim_w=144, dataset='bp4d'):
-    if dataset == 'bp4d':
-        if dim_h == dim_w: # square crop
-            vidLxL = cv2.resize(img_as_float(frame[int((frame.shape[0]-frame.shape[1])):,:,:]), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
-        else:
+'''
+#OLD VERSION
+def downsample_frame(frame, dim_h=144, dim_w=144, dataset='bp4d', face_detect=True):
+    if not face_detect:
+        if dataset == 'bp4d':
+            if dim_h == dim_w: # square crop
+                vidLxL = cv2.resize(img_as_float(frame[int((frame.shape[0]-frame.shape[1])):,:,:]), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
+            else:
+                vidLxL = cv2.resize(img_as_float(frame), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
+        elif dataset == 'cohface':
+            width = frame.shape[1]
+            height = frame.shape[0]
+            frame = frame[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]
             vidLxL = cv2.resize(img_as_float(frame), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
-    elif dataset == 'cohface':
-        width = frame.shape[1]
-        height = frame.shape[0]
-        frame = frame[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]
-        vidLxL = cv2.resize(img_as_float(frame), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
-    return cv2.cvtColor(vidLxL.astype('float32'), cv2.COLOR_BGR2RGB)
+    else:
+        bbox = detect_face(frame)
+        crp = frame[bbox[2]:bbox[3], bbox[0]:bbox[1], :]
+
+        width = crp.shape[1]
+        height = crp.shape[0]
+        if width >= height:
+            crp = crp[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]
+        else:
+            crp = crp[int((height-width)):,:,:] 
+        vidLxL = cv2.resize(img_as_float(crp), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
+
+    #return cv2.cvtColor(vidLxL.astype('float32'), cv2.COLOR_BGR2RGB)
+    return vidLxL.astype('float32')
+'''
+
+def downsample_frame(frame, dim_h=144, dim_w=144):
+    vidLxL = cv2.resize(img_as_float(frame), (dim_h,dim_w), interpolation=cv2.INTER_AREA)
+    return vidLxL.astype('float32')
 
 
 def diff_normalize_data(data):
@@ -164,15 +186,12 @@ def preprocess(frames, config_preprocess):
 
 
 def preprocess_frames(frames, config_preprocess):
-    """A slightly different version from the original: 
-    takes frames as input instead of video path """
-
     ppframes = []
     print("\n=== Preprocessing Video Frames ===\n")
     for img in tqdm(frames):
         dim_h = config_preprocess['BIG_H']
         dim_w = config_preprocess['BIG_W']
-        vid_LxL = downsample_frame(img, dim_h=dim_h, dim_w=dim_w, dataset=config_preprocess['DATASET']) # downsample frames (otherwise processing time becomes WAY TOO LONG)
+        vid_LxL = downsample_frame(img, dim_h=dim_h, dim_w=dim_w) # downsample frames (otherwise processing time becomes WAY TOO LONG)
         # clip image values to range (1/255, 1)
         vid_LxL[vid_LxL > 1] = 1
         vid_LxL[vid_LxL < 1./255] = 1./255
@@ -180,10 +199,6 @@ def preprocess_frames(frames, config_preprocess):
         ppframes.append(vid_LxL)
     Xsub = np.vstack(ppframes)
     big_clip, small_clip = preprocess(Xsub, config_preprocess)
-
-    #bc = np.swapaxes(big_clip, 2, 4)
-    #sc = np.swapaxes(small_clip, 2, 4)
-
     return big_clip, small_clip
 
 

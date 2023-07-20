@@ -72,8 +72,8 @@ config_preprocess['DATASET'] = 'bp4d'
 ##########################################################
 
 
-def predict_vitals(videoFileName):
-    frames = extract_raw(videoFileName)
+def predict_vitals(frames):
+    #frames = extract_raw(videoFileName)
     big_clip, small_clip = preprocess_frames(frames, config_preprocess)
     data = [torch.Tensor(big_clip), torch.Tensor(small_clip)]
 
@@ -88,11 +88,15 @@ def predict_vitals(videoFileName):
 
     model = define_model() # define the model
 
+    '''
     # LOAD ABOVED SPECIFIED MODEL FOR TESTING
     if torch.cuda.is_available():
         device = torch.device("cuda:0") # set device to primary GPU
     else:
         device = "cpu" # if no GPUs set device is CPU
+    '''
+
+    device = 'cpu'
 
     weights =  torch.load(model_path, map_location=torch.device(device))
     w = OrderedDict({k.replace('module.', ''): v  for k,v in weights.items()})

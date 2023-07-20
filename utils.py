@@ -84,6 +84,53 @@ def extract_frames_yield(videoFileName):
         success, image = vidcap.read()
     vidcap.release()
 
+def detect_face(img):
+    import mediapipe as mp
+    image_height, image_width, _ = img.shape
+    mp_face_detection = mp.solutions.face_detection
+    with mp_face_detection.FaceDetection(
+    model_selection=1, min_detection_confidence=0.5) as face_detection:
+        detection_result = face_detection.process(img)
+    bbox = detection_result.detections[0].location_data.relative_bounding_box
+    bbox_pxl = [bbox.xmin*image_width, bbox.ymin*image_height, bbox.width*image_width, bbox.height*image_height]
+    xmin = bbox_pxl[0]
+    xmax = xmin + bbox_pxl[2]
+    ymin = bbox_pxl[1]
+    ymax = ymin + bbox_pxl[3]
+    centerx = xmax - (xmax - xmin) / 2
+    centery = ymax - (ymax - ymin) / 2
+    xdist = max(image_width-centerx, centerx)
+    ydist = max(image_height-centery, centery)
+    d = min(xdist, ydist)
+    xmin = int(centerx - d)
+    xmax = int(centerx + d)
+    ymin = int(centery - d)
+    ymax = int(centery + d)
+    mybbox = [max(int(xmin), 0), min(int(xmax), img.shape[1]), max(int(ymin), 0), min(int(ymax), img.shape[0])]
+    return mybbox
+
+def get_face_ROI(video_path):
+    import cv2
+    print("\nExtracting face ROIs...")
+    i = 0
+    frames = []
+    t = tqdm(extract_frames_yield(video_path))
+    for frame in t:
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if (i == 0):
+            bbox = detect_face(frame)
+
+        crp = frame[bbox[2]:bbox[3], bbox[0]:bbox[1], :]
+        width = crp.shape[1]
+        height = crp.shape[0]
+        if width >= height:
+            crp = crp[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]
+        else:
+            crp = crp[int((height-width)):,:,:]
+        frames.append(crp)
+        i += 1
+    return frames
+
 def get_chest_ROI(video_path, dataset, mp_complexity=2, skip_rate=1):
     print("\nExtracting ROIs...")
 
@@ -575,3 +622,5 @@ def sliding_straded_win_idx(N, wsize, stride, fps):
         s += stride_fr
         timesES.append(wsize/2+stride*i)
     return idx, np.array(timesES, dtype=np.float32)
+
+

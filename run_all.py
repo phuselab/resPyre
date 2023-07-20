@@ -56,6 +56,10 @@ class BP4D(DatasetBase):
 		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
 		return rois
 
+	def extract_face_ROI(self, video_path):
+		rois = utils.get_face_ROI(video_path)
+		return rois
+
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
 		from riv.resp_from_rPPG import RR_from_rPPG
 
@@ -105,6 +109,10 @@ class COHFACE(DatasetBase):
 		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
 		return rois
 
+	def extract_face_ROI(self, video_path):
+		rois = utils.get_face_ROI(video_path)
+		return rois
+
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
 		from riv.resp_from_rPPG import RR_from_rPPG
 
@@ -148,7 +156,7 @@ class MTTS_CAN(MethodBase):
 	def process(self, data):
 		from deep.MTTS_CAN.my_predict_vitals import predict_vitals
 
-		_, resp = predict_vitals(data['video_path'], batch_size=self.batch_size, plot=False)
+		resp = predict_vitals(frames=data['video'], batch_size=self.batch_size)
 		return resp
 
 class BigSmall(MethodBase):
@@ -160,7 +168,7 @@ class BigSmall(MethodBase):
 	def process(self, data):
 		from deep.BigSmall.predict_vitals import predict_vitals
 
-		resp = predict_vitals(data['video_path'])
+		resp = predict_vitals(data['video'])
 		return resp
 
 # Motion based
@@ -449,6 +457,10 @@ def extract_respiration(datasets, methods, results_dir):
 				elif m.data_type == 'rppg' and not d['rppg_obj']:
 					d['rppg_obj'] = dataset.extract_rppg(d['video_path'])
 
+				# If method process face, extract it first
+				elif m.data_type == 'video' and not d['rppg_obj']:
+					d['video'] = dataset.extract_face_ROI(d['video_path'])
+
 				output = {'method': m.name,
 						  'estimate': m.process(d)}
 
@@ -461,7 +473,7 @@ def extract_respiration(datasets, methods, results_dir):
 
 def main(argv):
 	# Define the path where to save results
-	results_dir = 'results/COHFACE/'
+	results_dir = 'results/BP4D/'
 	what = 0 # 0: Estimate signals, 1: Perform results evalution, 2: Print metrics
 
 	opts, args = getopt.getopt(argv,"ha:d:",["action=","dir="])
@@ -480,10 +492,10 @@ def main(argv):
 
 		# Initialize a list of methods
 		#methods = [peak(), morph(), bss_ssa(), bss_emd()]
-		methods = [BigSmall()]
+		methods = [BigSmall(), MTTS_CAN()]
 
 		# Initialize a list of datasets
-		datasets = [COHFACE()]
+		datasets = [BP4D(), COHFACE()]
 
 		extract_respiration(datasets, methods, results_dir)
 
