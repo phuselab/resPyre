@@ -1,8 +1,8 @@
 import torch
-from BigSmall import BigSmall
+from .BigSmall import BigSmall
 import numpy as np
 import cv2
-from preprocess import preprocess_frames, extract_raw
+from .preprocess import preprocess_frames, extract_raw
 import os
 from scipy import signal
 from scipy.signal import butter, filtfilt
@@ -72,15 +72,15 @@ config_preprocess['DATASET'] = 'bp4d'
 ##########################################################
 
 
-def predict_vitals(videoFileName):
-    frames = extract_raw(videoFileName)
+def predict_vitals(frames):
+    #frames = extract_raw(videoFileName)
     big_clip, small_clip = preprocess_frames(frames, config_preprocess)
     data = [torch.Tensor(big_clip), torch.Tensor(small_clip)]
 
     """ Model evaluation on the testing dataset."""
     print("\n=== Loading pretrained weights ===\n")
 
-    model_path = "checkpoints/BP4D_BigSmall_Multitask_Fold1.pth"
+    model_path = "deep/BigSmall/checkpoints/BP4D_BigSmall_Multitask_Fold1.pth"
     print("Testing uses pretrained model!")
     print('Model path:', model_path)
     if not os.path.exists(model_path):
@@ -88,11 +88,14 @@ def predict_vitals(videoFileName):
 
     model = define_model() # define the model
 
+    '''
     # LOAD ABOVED SPECIFIED MODEL FOR TESTING
     if torch.cuda.is_available():
         device = torch.device("cuda:0") # set device to primary GPU
     else:
-        device = "cpu" # if no GPUs set device is CPU
+        device = "cpu" # if no GPUs set device is CPU'''
+
+    device = 'cpu'
 
     weights =  torch.load(model_path, map_location=torch.device(device))
     w = OrderedDict({k.replace('module.', ''): v  for k,v in weights.items()})
@@ -111,9 +114,12 @@ def predict_vitals(videoFileName):
         # GET MODEL PREDICTIONS
         _, _, resp_out = model(data)
 
+    del model
+    torch.cuda.empty_cache()
+
     return resp_out
 
-
+'''
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -154,3 +160,4 @@ if __name__ == "__main__":
     plt.xlim([0,maxF+0.5])
     plt.title("RR: "+str(round(RR,2))+" resp/min")
     plt.show()
+'''

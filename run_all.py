@@ -34,8 +34,8 @@ class BP4D(DatasetBase):
 			for trial in utils.sort_nicely(os.listdir(sub_path)):
 				trial_path = sub_path + trial + '/'
 				video_path = trial_path + 'vid.avi'
-				
-				if os.path.exists(video_path):	
+
+				if os.path.exists(video_path):
 					d = {}
 					d['video_path'] = video_path
 					d['subject'] = sub
@@ -45,15 +45,18 @@ class BP4D(DatasetBase):
 					d['gt'] = self.load_gt(trial_path)
 					self.data.append(d)
 
-		print('%d items loaded!' % len(self.data)) 
+		print('%d items loaded!' % len(self.data))
 
 	def load_gt(self, trial_path):
 		#Load GT
 		gt = np.loadtxt(trial_path + "/Resp_Volts.txt")
 		return gt
 
-	def extract_ROI(self, video_path):
-		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+	def extract_ROI(self, video_path, region='chest'):
+		if region == 'chest':
+			rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+		elif region == 'face':
+			rois = utils.get_face_ROI(video_path)
 		return rois
 
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
@@ -69,7 +72,7 @@ class COHFACE(DatasetBase):
 		self.name = 'cohface'
 		self.path = self.data_dir + 'cohface/data/'
 		self.fs_gt = 32
-		self.data = [] 		
+		self.data = []
 
 	def load_dataset(self):
 		print('\nLoading dataset ' + self.name + '...')
@@ -79,8 +82,8 @@ class COHFACE(DatasetBase):
 			for trial in utils.sort_nicely(os.listdir(sub_path)):
 				trial_path = sub_path + trial + '/'
 				video_path = trial_path + 'data.avi'
-				
-				if os.path.exists(video_path):	
+
+				if os.path.exists(video_path):
 					d = {}
 					d['video_path'] = video_path
 					d['subject'] = sub
@@ -101,8 +104,11 @@ class COHFACE(DatasetBase):
 		gt = gt[np.arange(0, len(gt), 8)] # ???
 		return gt
 
-	def extract_ROI(self, video_path):
-		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+	def extract_ROI(self, video_path, region='chest'):
+		if region == 'chest':
+			rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+		elif region == 'face':
+			rois = utils.get_face_ROI(video_path)
 		return rois
 
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
@@ -131,7 +137,7 @@ class MethodBase:
 		self.name = ''
 		self.win_size = 30
 		self.data_type = ''
-	
+
 	def process(self, data):
 		# This class can be used to process either videos or ROIs
 		raise NotImplementedError("Subclasses must implement process method")
@@ -143,24 +149,24 @@ class MTTS_CAN(MethodBase):
 		super().__init__()
 		self.name = 'MTTS_CAN'
 		self.batch_size = 100
-		self.data_type = 'video'
+		self.data_type = 'face'
 
 	def process(self, data):
 		from deep.MTTS_CAN.my_predict_vitals import predict_vitals
 
-		_, resp = predict_vitals(data['video_path'], batch_size=self.batch_size, plot=False)
+		resp = predict_vitals(frames=data['rois'], batch_size=self.batch_size)
 		return resp
 
 class BigSmall(MethodBase):
 	def __init__(self):
 		super().__init__()
 		self.name = 'BigSmall'
-		self.data_type = 'video'
+		self.data_type = 'face'
 
 	def process(self, data):
 		from deep.BigSmall.predict_vitals import predict_vitals
 
-		resp = predict_vitals(data['video_path'])
+		resp = predict_vitals(data['rois'])
 		return resp
 
 # Motion based
@@ -226,7 +232,7 @@ class OF_Deep(MethodBase):
 
 		del model
 		torch.cuda.empty_cache()
-		
+
 		return s
 
 class OF_Model(MethodBase):
@@ -260,8 +266,8 @@ class DoF(MethodBase):
 
 		# convert rois to grayscale
 		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['rois']];
-		
-		# estimate DoF		
+
+		# estimate DoF
 		dof, _ = DoF(g_rois, data['fps'])
 		return dof
 
@@ -278,7 +284,7 @@ class profile1D(MethodBase):
 
 		# convert rois to grayscale
 		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['rois']];
-		
+
 		# estimate profile1D
 		profile, _ = profile1D(g_rois, data['fps'])
 		return profile
@@ -333,10 +339,10 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 	method_metrics = {}
 
 	files = utils.sort_nicely(os.listdir(results_dir))
-	
+
 	for filepath in tqdm(files, desc="Processing files"):
 		tqdm.write("> Processing file %s" % (filepath))
-		
+
 		# Open the file with pickled data
 		file = open(results_dir + filepath, 'rb')
 		data = pickle.load(file)
@@ -382,10 +388,10 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 			for d in range(filt_sig.shape[0]):
 				# Apply windowing to the estimation
 				sig_win, t_sig = utils.sig_windowing(filt_sig[d,:], fps, win_size)
-				
+
 				# Extract estimated RPM
 				sig_rpm.append(utils.sig_to_RPM(sig_win, fps, int(win_size/1.5), 0.2, 0.5))
-			
+
 			sig_rpm = np.mean(sig_rpm, axis=0)
 
 			e = errors.getErrors(sig_rpm, gt_rpm, t_sig, t_gt, metrics)
@@ -413,15 +419,15 @@ def print_metrics(results_dir):
 			std = np.nanstd([metric[i] for metric in metrics_value])
 
 			vals.append(f"%.3f (%.2f)" % (float(avg), float(std)))
-		
+
 		t.add_row([method] + vals)
-	
+
 	print(t)
 
 def extract_respiration(datasets, methods, results_dir):
 
 	for dataset in datasets:
-		
+
 		dataset.load_dataset()
 		# Loop over the dataset
 		for d in tqdm(dataset.data, desc="Processing files"):
@@ -448,8 +454,8 @@ def extract_respiration(datasets, methods, results_dir):
 				tqdm.write("> Applying method %s ..." % m.name)
 
 		 		# If method process rois, extract them first
-				if m.data_type == 'chest' and not d['rois']:
-					d['rois'] = dataset.extract_ROI(d['video_path'])
+				if m.data_type in ['chest', 'face'] and not d['rois']:
+					d['rois'] = dataset.extract_ROI(d['video_path'], m.data_type)
 
 		 		# If method process rppg, extract it first
 				elif m.data_type == 'rppg' and not d['rppg_obj']:
@@ -459,6 +465,8 @@ def extract_respiration(datasets, methods, results_dir):
 						  'estimate': m.process(d)}
 
 				results['estimates'].append(output)
+
+			d['rois'] = []	#release some memory
 
 			# Save the results of the applied methods
 			with open(outfilename, 'wb') as fp:
@@ -481,14 +489,15 @@ def main(argv):
 			results_dir = arg
 	print ('Action is ', what)
 	print ('Results dir is ', results_dir)
-	
+
 	if what == 0: 
 
 		# Initialize a list of methods
-		methods = [peak(), morph(), bss_ssa(), bss_emd()]
+		#methods = [peak(), morph(), bss_ssa(), bss_emd()]
+		methods = [BigSmall(), MTTS_CAN()]
 
 		# Initialize a list of datasets
-		datasets = [BP4D()]
+		datasets = [BP4D(), COHFACE()]
 
 		extract_respiration(datasets, methods, results_dir)
 
@@ -496,7 +505,7 @@ def main(argv):
 
 		# Define list of metrics to evaluate
 		metrics = ['RMSE', 'MAE', 'MAX', 'PCC', 'CCC']
-		
+
 		evaluate(results_dir, metrics)
 
 	elif what == 2:

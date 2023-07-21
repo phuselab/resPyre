@@ -7,6 +7,39 @@ import time
 import scipy.io
 from scipy.sparse import spdiags
 
+def preprocess_frames(frames, dim=36):
+  """A slightly different version from the original: 
+    takes frames as input instead of video path """
+  frames = np.stack(frames)
+  totalFrames = frames.shape[0]
+  Xsub = np.zeros((totalFrames, dim, dim, 3), dtype=np.float32)
+  t = []
+  # Crop each frame size into dim x dim
+  for i,img in enumerate(frames):
+    t.append(i)       # current timestamp in milisecond
+    vidLxL = cv2.resize(img_as_float(img), (dim, dim), interpolation = cv2.INTER_AREA)
+    vidLxL = cv2.rotate(vidLxL, cv2.ROTATE_90_CLOCKWISE) # rotate 90 degree
+    vidLxL[vidLxL > 1] = 1
+    vidLxL[vidLxL < (1/255)] = 1/255
+    Xsub[i, :, :, :] = vidLxL
+
+  # Normalized Frames in the motion branch
+  normalized_len = len(t) - 1
+  dXsub = np.zeros((normalized_len, dim, dim, 3), dtype = np.float32)
+  for j in range(normalized_len - 1):
+    dXsub[j, :, :, :] = (Xsub[j+1, :, :, :] - Xsub[j, :, :, :]) / (Xsub[j+1, :, :, :] + Xsub[j, :, :, :])
+  dXsub = dXsub / np.std(dXsub)
+  
+  # Normalize raw frames in the apperance branch
+  Xsub = Xsub - np.mean(Xsub)
+  Xsub = Xsub  / np.std(Xsub)
+  Xsub = Xsub[:totalFrames-1, :, :, :]
+  
+  # Plot an example of data after preprocess
+  dXsub = np.concatenate((dXsub, Xsub), axis=3);
+  return dXsub
+
+'''
 def preprocess_raw_video(videoFilePath, dim=36):
 
     #########################################################################
@@ -55,6 +88,7 @@ def preprocess_raw_video(videoFilePath, dim=36):
     # Plot an example of data after preprocess
     dXsub = np.concatenate((dXsub, Xsub), axis = 3);
     return dXsub, fps
+'''
 
 def detrend(signal, Lambda):
     """detrend(signal, Lambda) -> filtered_signal
