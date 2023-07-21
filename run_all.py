@@ -88,7 +88,8 @@ class COHFACE(DatasetBase):
 					d['video_path'] = video_path
 					d['subject'] = sub
 					d['trial'] = trial
-					d['rois'] = []
+					d['chest_rois'] = []
+					d['face_rois'] = []
 					d['rppg_obj'] = []
 					d['gt'] = self.load_gt(trial_path)
 					self.data.append(d)
@@ -454,9 +455,12 @@ def extract_respiration(datasets, methods, results_dir):
 				tqdm.write("> Applying method %s ..." % m.name)
 
 		 		# If method process rois, extract them first
-				if m.data_type in ['chest', 'face'] and not d['rois']:
-					d['rois'] = dataset.extract_ROI(d['video_path'], m.data_type)
+				if m.data_type == 'chest' and not d['chest_rois']:
+					d['chest_rois'] = dataset.extract_ROI(d['video_path'], m.data_type)
 
+				elif m.data_type == 'face' and not d['face_rois']:
+					d['face_rois'] = dataset.extract_ROI(d['video_path'], m.data_type)
+		 		
 		 		# If method process rppg, extract it first
 				elif m.data_type == 'rppg' and not d['rppg_obj']:
 					d['rppg_obj'] = dataset.extract_rppg(d['video_path'])
@@ -466,7 +470,8 @@ def extract_respiration(datasets, methods, results_dir):
 
 				results['estimates'].append(output)
 
-			d['rois'] = []	#release some memory
+			d['chest_rois'] = []	#release some memory
+			d['face_rois'] = []	#release some memory
 
 			# Save the results of the applied methods
 			with open(outfilename, 'wb') as fp:
