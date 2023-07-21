@@ -63,7 +63,7 @@ def get_vid_stats(videoFileName):
     fps = cap.get(cv.CAP_PROP_FPS)      # OpenCV v2.x used "CV_CAP_PROP_FPS"
     frame_count = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
     duration = frame_count/fps
-    return int(duration), int(fps)
+    return duration, int(fps)
 
 def sort_nicely(l): 
   """ Sort the given list in the way that humans expect. 
@@ -215,6 +215,21 @@ def sig_to_RPM(sig, fps, winsize, minHz=0.1, maxHz=0.4):
 
     return rpm
 
+def select_component(sig, fps, winsize, minHz=0.1, maxHz=0.4):
+    
+    cur_pMax = 0
+
+    for d in range(sig.shape[0]):
+        Pfreqs, Power = Welch_rpm(sig[d,:][np.newaxis,:], fps, winsize, minHz, maxHz)
+        pMax = np.max(Power, axis=1)  # power max
+        
+        if pMax > cur_pMax:
+            cur_pMax = pMax
+            cur_d = d
+
+    return sig[cur_d, :][np.newaxis,:]
+
+
 def average_filter(sig, win_length = 5):
     """
     This method applies to a signal an average filter
@@ -250,6 +265,8 @@ def filter_RW(sig, fps, lo=0.1, hi=0.5):
     """
     #sig = np.diff(np.asarray(sig), axis=0)
     #sig = np.squeeze(sig)
+    if (sig.ndim == 1):
+        sig = sig[np.newaxis,:]
 
     b, a = signal.butter(N=2, Wn=[lo, hi], fs=fps, btype='bandpass')
     filtered_sig = signal.filtfilt(b, a, sig)

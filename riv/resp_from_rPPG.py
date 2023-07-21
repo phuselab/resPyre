@@ -143,7 +143,8 @@ class RR_from_rPPG():
     def extract_RIVs_from_IMS(self):
 
         par = np.array([0.6, 0.5, 2.0, 1.6])
-        ims = IMS(self.m, self.fps, self.fps, self.wsize, int(self.bvps.shape[0]), par, False)
+
+        ims = IMS(self.m, self.fps, self.fps, self.wsize, self.bvps.shape[0], par, False)
         ims.compute_IMS(self.bvps)
         peak_interval, peak_val_max, amplitude_max, artifacts = ims.get_IMS()
 
@@ -156,13 +157,8 @@ class RR_from_rPPG():
 
         fc = 1      # FIRfilter cutoff: 1Hz
         ft = 0.2    # FIRfilter transition band: 0.2Hz
-
-        N_div = self.wsize//2-1 if self.wsize % 2 == 0 else (self.wsize-1)//2
-        spec = np.zeros((nIMF+1, N_div))   #data structure which stores the spectrum of the IMFs components
-        freq = np.zeros((nIMF+1, N_div))   #data structure which stores the frequencies of the spectrum of the IMFs components
-        spectrum = True                    #set to TRUE to return the spectrum of the IMFs components
-
-        filt = FIRfilt('LP', fc, ft, self.fps, self.wsize)
+        
+        filt = FIRfilt('LP', fc, ft, self.fps, round(self.wsize))
         x_filt = filt.filtering(self.bvps)
 
         IMF = np.transpose(emd.sift.sift(x_filt)[:,:nIMF+1])
@@ -174,7 +170,7 @@ class RR_from_rPPG():
         
         sig = self.bvps.reshape(1,-1)
         
-        ssa = SingularSpectrumAnalysis(window_size=self.wsize, groups=nGroups)
+        ssa = SingularSpectrumAnalysis(groups=nGroups)
         return ssa.fit_transform(sig)[0]
 
 

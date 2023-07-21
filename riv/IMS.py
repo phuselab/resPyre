@@ -25,10 +25,11 @@ class IMS:
         self.a_fs_lw_par = par[1]                   #lw adaptation parameter fast - low (0.5)
         self.a_sl_up_par = par[2]                   #up adaptation parameter slow - up (2.0)
         self.a_fs_up_par = par[3]                   #up adaptation parameter fast - up (1.6)
-        self.artifacts = np.zeros(rFs*dur)          #data structure to store which RIV samples are referred to respiratory artifacts
-        self.peak_interval_res = np.zeros(rFs*dur)  #data structure which stores the RIFV signal
-        self.peak_val_max_res = np.zeros(rFs*dur)   #data structure which stores the RIIV signal
-        self.amplitude_max_res = np.zeros(rFs*dur)  #data structure which stores the RIAV signal
+        self.riv_samples = round(rFs*dur)
+        self.artifacts = np.zeros(self.riv_samples)          #data structure to store which RIV samples are referred to respiratory artifacts
+        self.peak_interval_res = np.zeros(self.riv_samples)  #data structure which stores the RIFV signal
+        self.peak_val_max_res = np.zeros(self.riv_samples)   #data structure which stores the RIIV signal
+        self.amplitude_max_res = np.zeros(self.riv_samples)  #data structure which stores the RIAV signal
         self.visualize = visualize                  #set to TRUE to visualize intermediate plots (not recommended)
 
 
@@ -36,7 +37,7 @@ class IMS:
         lamb = 0                                    #counter of the number of subsequent artifacts
         th_lw = 0.6*self.amplitude_max_res[0]       #lower threshold
         th_up = 1.4*self.amplitude_max_res[0]       #upper threshold
-        for i in range(1,self.rFs*self.dur):        #for each sample, if the RIV signals do not satify certain conditions...
+        for i in range(1,self.riv_samples):        #for each sample, if the RIV signals do not satify certain conditions...
             if (self.peak_interval_res[i]<0.23 or self.peak_interval_res[i]>=2.4) or (self.peak_interval_res[i]<=self.peak_interval_res[i-1]/2) or (self.amplitude_max_res[i]<th_lw or self.amplitude_max_res[i]>th_up):
                 self.artifacts[i] = 1               #detect the artifact
                 if lamb>0:                          #if the counter triggers the updating procedure
@@ -114,19 +115,19 @@ class IMS:
         #minimum-peak-time-interspersed series
 
         peak_interval = np.diff(peaks_idx_min/self.Fs)
-        self.peak_interval_res = sp.signal.resample(peak_interval, self.rFs*self.dur)
+        self.peak_interval_res = sp.signal.resample(peak_interval, self.riv_samples)
 
         #RIIV information is conveyed by the maximum-peak-valued
         #and 4Hz-sampled time series
 
         peak_val_max = out[peaks_idx_max]
-        self.peak_val_max_res = sp.signal.resample(peak_val_max, self.rFs*self.dur)
+        self.peak_val_max_res = sp.signal.resample(peak_val_max, self.riv_samples)
 
         #RIAV is carried by 4Hz-sampled series generated from the
         #difference between maximum values and minimum values (amplitude trend)
 
         amplitude_max = out[peaks_idx_max] - out[peaks_idx_min]
-        self.amplitude_max_res = sp.signal.resample(amplitude_max, self.rFs*self.dur)
+        self.amplitude_max_res = sp.signal.resample(amplitude_max, self.riv_samples)
 
         #artifacts computation
         self.compute_artifacts()

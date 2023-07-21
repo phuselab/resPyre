@@ -59,7 +59,7 @@ class BP4D(DatasetBase):
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
 		from riv.resp_from_rPPG import RR_from_rPPG
 
-		rppg_obj =  RR_from_rPPG(video_path, method=method)
+		rppg_obj = RR_from_rPPG(video_path, method=method)
 		rppg_obj.get_rPPG()
 		return rppg_obj
 
@@ -199,7 +199,6 @@ class OF_Deep(MethodBase):
 				prev = r
 				io_adapter = IOAdapter(model, prev.size, cuda = True)
 				continue
-
 
 			curr = r
 
@@ -367,20 +366,27 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 			sig = est['estimate']
 
 			if (sig.ndim == 1):
-				sig = sig[:,np.newaxis]
+				sig = sig[np.newaxis,:]
 
 			# Filter estimated signal over all dimensions
 			filt_sig = []
-			for d in range(sig.shape[1]):
-				filt_sig.append(utils.filter_RW(sig[:,d], fps))
+			for d in range(sig.shape[0]):
+				filt_sig.append(utils.filter_RW(sig[d,:], fps))
 
 			filt_sig = np.vstack(filt_sig)
 
-			# Apply windowing to the estimation
-			sig_win, t_sig = utils.sig_windowing(filt_sig, fps, win_size)
+			if cur_method in ['bss_emd', 'bss_ssa']:
+				filt_sig = utils.select_component(filt_sig, fps, int(win_size/1.5), 0.2, 0.5)
 
-			# Extract estimated RPM
-			sig_rpm = utils.sig_to_RPM(sig_win, fps, int(win_size/1.5), 0.2, 0.5)
+			sig_rpm = []
+			for d in range(filt_sig.shape[0]):
+				# Apply windowing to the estimation
+				sig_win, t_sig = utils.sig_windowing(filt_sig[d,:], fps, win_size)
+				
+				# Extract estimated RPM
+				sig_rpm.append(utils.sig_to_RPM(sig_win, fps, int(win_size/1.5), 0.2, 0.5))
+			
+			sig_rpm = np.mean(sig_rpm, axis=0)
 
 			e = errors.getErrors(sig_rpm, gt_rpm, t_sig, t_gt, metrics)
 
@@ -461,7 +467,7 @@ def extract_respiration(datasets, methods, results_dir):
 
 def main(argv):
 	# Define the path where to save results
-	results_dir = 'results/COHFACE/'
+	results_dir = 'results/'
 	what = 0 # 0: Estimate signals, 1: Perform results evalution, 2: Print metrics
 
 	opts, args = getopt.getopt(argv,"ha:d:",["action=","dir="])
@@ -482,7 +488,7 @@ def main(argv):
 		methods = [peak(), morph(), bss_ssa(), bss_emd()]
 
 		# Initialize a list of datasets
-		datasets = [COHFACE()]
+		datasets = [BP4D()]
 
 		extract_respiration(datasets, methods, results_dir)
 
