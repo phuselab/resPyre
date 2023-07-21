@@ -93,8 +93,7 @@ def predict_vitals(frames):
     if torch.cuda.is_available():
         device = torch.device("cuda:0") # set device to primary GPU
     else:
-        device = "cpu" # if no GPUs set device is CPU
-    '''
+        device = "cpu" # if no GPUs set device is CPU'''
 
     device = 'cpu'
 
@@ -114,6 +113,9 @@ def predict_vitals(frames):
 
         # GET MODEL PREDICTIONS
         _, _, resp_out = model(data)
+
+    del model
+    torch.cuda.empty_cache()
 
     return resp_out
 

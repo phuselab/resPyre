@@ -52,12 +52,11 @@ class BP4D(DatasetBase):
 		gt = np.loadtxt(trial_path + "/Resp_Volts.txt")
 		return gt
 
-	def extract_ROI(self, video_path):
-		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
-		return rois
-
-	def extract_face_ROI(self, video_path):
-		rois = utils.get_face_ROI(video_path)
+	def extract_ROI(self, video_path, region='chest'):
+		if region == 'chest':
+			rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+		elif region == 'face':
+			rois = utils.get_face_ROI(video_path)
 		return rois
 
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
@@ -105,12 +104,11 @@ class COHFACE(DatasetBase):
 		gt = gt[np.arange(0, len(gt), 8)] # ???
 		return gt
 
-	def extract_ROI(self, video_path):
-		rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
-		return rois
-
-	def extract_face_ROI(self, video_path):
-		rois = utils.get_face_ROI(video_path)
+	def extract_ROI(self, video_path, region='chest'):
+		if region == 'chest':
+			rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+		elif region == 'face':
+			rois = utils.get_face_ROI(video_path)
 		return rois
 
 	def extract_rppg(self, video_path, method='cpu_CHROM'):
@@ -151,24 +149,24 @@ class MTTS_CAN(MethodBase):
 		super().__init__()
 		self.name = 'MTTS_CAN'
 		self.batch_size = 100
-		self.data_type = 'video'
+		self.data_type = 'face'
 
 	def process(self, data):
 		from deep.MTTS_CAN.my_predict_vitals import predict_vitals
 
-		resp = predict_vitals(frames=data['video'], batch_size=self.batch_size)
+		resp = predict_vitals(frames=data['rois'], batch_size=self.batch_size)
 		return resp
 
 class BigSmall(MethodBase):
 	def __init__(self):
 		super().__init__()
 		self.name = 'BigSmall'
-		self.data_type = 'video'
+		self.data_type = 'face'
 
 	def process(self, data):
 		from deep.BigSmall.predict_vitals import predict_vitals
 
-		resp = predict_vitals(data['video'])
+		resp = predict_vitals(data['rois'])
 		return resp
 
 # Motion based
@@ -450,21 +448,19 @@ def extract_respiration(datasets, methods, results_dir):
 				tqdm.write("> Applying method %s ..." % m.name)
 
 		 		# If method process rois, extract them first
-				if m.data_type == 'chest' and not d['rois']:
-					d['rois'] = dataset.extract_ROI(d['video_path'])
+				if m.data_type in ['chest', 'face'] and not d['rois']:
+					d['rois'] = dataset.extract_ROI(d['video_path'], m.data_type)
 
 		 		# If method process rppg, extract it first
 				elif m.data_type == 'rppg' and not d['rppg_obj']:
 					d['rppg_obj'] = dataset.extract_rppg(d['video_path'])
 
-				# If method process face, extract it first
-				elif m.data_type == 'video' and not d['rppg_obj']:
-					d['video'] = dataset.extract_face_ROI(d['video_path'])
-
 				output = {'method': m.name,
 						  'estimate': m.process(d)}
 
 				results['estimates'].append(output)
+
+			d['rois'] = []	#release some memory
 
 			# Save the results of the applied methods
 			with open(outfilename, 'wb') as fp:
