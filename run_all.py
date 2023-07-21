@@ -40,7 +40,8 @@ class BP4D(DatasetBase):
 					d['video_path'] = video_path
 					d['subject'] = sub
 					d['trial'] = trial
-					d['rois'] = []
+					d['chest_rois'] = []
+					d['face_rois'] = []
 					d['rppg_obj'] = []
 					d['gt'] = self.load_gt(trial_path)
 					self.data.append(d)

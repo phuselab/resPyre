@@ -114,10 +114,12 @@ def predict_vitals(frames):
         # GET MODEL PREDICTIONS
         _, _, resp_out = model(data)
 
+    resp_out_np = resp_out.cpu().detach().numpy()
+    
     del model
     torch.cuda.empty_cache()
 
-    return resp_out
+    return resp_out_np
 
 '''
 if __name__ == "__main__":
