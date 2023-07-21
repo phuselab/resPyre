@@ -155,7 +155,7 @@ class MTTS_CAN(MethodBase):
 	def process(self, data):
 		from deep.MTTS_CAN.my_predict_vitals import predict_vitals
 
-		resp = predict_vitals(frames=data['rois'], batch_size=self.batch_size)
+		resp = predict_vitals(frames=data['face_rois'], batch_size=self.batch_size)
 		return resp
 
 class BigSmall(MethodBase):
@@ -167,7 +167,7 @@ class BigSmall(MethodBase):
 	def process(self, data):
 		from deep.BigSmall.predict_vitals import predict_vitals
 
-		resp = predict_vitals(data['rois'])
+		resp = predict_vitals(data['face_rois'])
 		return resp
 
 # Motion based
@@ -193,7 +193,7 @@ class OF_Deep(MethodBase):
 		model.to(device)
 
 		s = []
-		for i, r in enumerate(data['rois']):
+		for i, r in enumerate(data['chest_rois']):
 
 			#hsize = 144
 			#wpercent = hsize/float(r.size[1])
@@ -248,7 +248,7 @@ class OF_Model(MethodBase):
 		import cv2 as cv
 
 		# convert rois to grayscale
-		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['rois']];
+		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['chest_rois']];
 
 		# estimate OF
 		of, _ = OF(g_rois, data['fps'])
@@ -266,7 +266,7 @@ class DoF(MethodBase):
 		import cv2 as cv
 
 		# convert rois to grayscale
-		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['rois']];
+		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['chest_rois']];
 
 		# estimate DoF
 		dof, _ = DoF(g_rois, data['fps'])
@@ -284,7 +284,7 @@ class profile1D(MethodBase):
 		import cv2 as cv
 
 		# convert rois to grayscale
-		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['rois']];
+		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['chest_rois']];
 
 		# estimate profile1D
 		profile, _ = profile1D(g_rois, data['fps'])
