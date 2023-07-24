@@ -61,7 +61,7 @@ def MAPEerror(bpmES, bpmGT, timesES=None, timesGT=None):
 
     diff = bpm_diff(bpmES, bpmGT, timesES, timesGT, normalize=True)
     n, m = diff.shape  # n = num channels, m = bpm length
-    df = np.sum(np.abs(norm_diff), axis=1)
+    df = np.sum(np.abs(diff), axis=1)
 
     # -- final MAE
     MAE = df/m
