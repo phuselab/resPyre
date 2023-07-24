@@ -413,7 +413,7 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 		for i, est in enumerate(data['estimates']):
 
 			cur_method = est['method']
-			sig = est['estimate']
+			sig = np.squeeze(est['estimate'])
 
 			if (sig.ndim == 1):
 				sig = sig[np.newaxis,:]
