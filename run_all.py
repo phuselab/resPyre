@@ -124,13 +124,55 @@ class MAHNOB(DatasetBase):
 	def __init__(self):
 		super().__init__()
 		self.name = 'mahnob'
-		self.path = self.data_dir + 'mahnob/'
+		self.path = self.data_dir + 'MAHNOB/'
+		self.data = []
+
+	def load_gt(self, sbj_path):
+		import pybdf
+		for fn in os.listdir(sbj_path):
+			if fn.endswith('.bdf'):
+				break
+		bdfRec = pybdf.bdfRecording(sbj_path + '/' + fn)
+		rec = bdfRec.getData(channels=[44])
+		self.fs_gt = bdfRec.sampRate[44]
+		gt = np.array(rec['data'][0])
+		return gt
+
 
 	def load_dataset(self):
-		pass
+		print('\nLoading dataset ' + self.name + '...')
+		for sub in utils.sort_nicely(os.listdir(self.path)):
+			sub_path = self.path + sub + '/'
+			for fn in os.listdir(sub_path):
+				if fn.endswith('.avi'):
+					break
+			video_path = sub_path + fn
 
-	def extract_ROI(self, video_path):
-		pass
+			if os.path.exists(video_path):
+				d = {}
+				d['video_path'] = video_path
+				d['subject'] = sub
+				d['chest_rois'] = []
+				d['face_rois'] = []
+				d['rppg_obj'] = []
+				d['gt'] = self.load_gt(sub_path)
+				self.data.append(d)
+
+		print('%d items loaded!' % len(self.data)) 
+
+	def extract_ROI(self, video_path, region='chest'):
+		if region == 'chest':
+			rois, _, _ = utils.get_chest_ROI(video_path, self.name, mp_complexity=1, skip_rate=10)
+		elif region == 'face':
+			rois = utils.get_face_ROI(video_path)
+		return rois
+
+	def extract_rppg(self, video_path, method='cpu_CHROM'):
+		from riv.resp_from_rPPG import RR_from_rPPG
+
+		rppg_obj =  RR_from_rPPG(video_path, method=method)
+		rppg_obj.get_rPPG()
+		return rppg_obj
 
 # Methods class definitions
 
@@ -434,7 +476,10 @@ def extract_respiration(datasets, methods, results_dir):
 		# Loop over the dataset
 		for d in tqdm(dataset.data, desc="Processing files"):
 
-			outfilename = results_dir + dataset.name + '_' + d['subject'] + '_' + d['trial'] + '.pkl'
+			if 'trial' in d.keys(): 
+				outfilename = results_dir + dataset.name + '_' + d['subject'] + '_' + d['trial'] + '.pkl'
+			else:
+				outfilename = results_dir + dataset.name + '_' + d['subject'] + '.pkl'
 
 			if os.path.exists(outfilename):
 				tqdm.write("> File %s already exists! Skipping..." % outfilename)
@@ -448,7 +493,10 @@ def extract_respiration(datasets, methods, results_dir):
 					   'fs_gt': dataset.fs_gt,
 					   'estimates': [] }
 
-			tqdm.write("> Processing video %s/%s\n> fps: %d" % (d['subject'], d['trial'], d['fps']))
+			if 'trial' in d.keys(): 
+				tqdm.write("> Processing video %s/%s\n> fps: %d" % (d['subject'], d['trial'], d['fps']))
+			else:
+				tqdm.write("> Processing video %s\n> fps: %d" % (d['subject'], d['fps']))
 
 			# Apply every method to each video
 			for m in methods:
@@ -510,7 +558,7 @@ def main(argv):
 	elif what == 1:
 
 		# Define list of metrics to evaluate
-		metrics = ['RMSE', 'MAE', 'MAX', 'PCC', 'CCC']
+		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC']
 
 		evaluate(results_dir, metrics)
 
