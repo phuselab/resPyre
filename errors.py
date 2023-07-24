@@ -16,6 +16,8 @@ def getErrors(bpmES, bpmGT, timesES, timesGT, metrics):
             e = RMSEerror(bpmES, bpmGT, timesES, timesGT)
         elif m == 'MAE':
             e = MAEerror(bpmES, bpmGT, timesES, timesGT)
+        elif m == 'MAPE':
+            e = MAPEerror(bpmES, bpmGT, timesES, timesGT)
         elif m == 'MAX':
             e = MAXError(bpmES, bpmGT, timesES, timesGT)
         elif m == 'PCC':
@@ -49,6 +51,17 @@ def MAEerror(bpmES, bpmGT, timesES=None, timesGT=None):
     diff = bpm_diff(bpmES, bpmGT, timesES, timesGT)
     n, m = diff.shape  # n = num channels, m = bpm length
     df = np.sum(np.abs(diff), axis=1)
+
+    # -- final MAE
+    MAE = df/m
+    return MAE
+
+def MAPEerror(bpmES, bpmGT, timesES=None, timesGT=None):
+    """ Computes MAE """
+
+    diff = bpm_diff(bpmES, bpmGT, timesES, timesGT, normalize=True)
+    n, m = diff.shape  # n = num channels, m = bpm length
+    df = np.sum(np.abs(norm_diff), axis=1)
 
     # -- final MAE
     MAE = df/m
@@ -167,7 +180,7 @@ def displayErrors(bpmES, bpmGT, timesES=None, timesGT=None):
     fig.show()
 
 
-def bpm_diff(bpmES, bpmGT, timesES=None, timesGT=None):
+def bpm_diff(bpmES, bpmGT, timesES=None, timesGT=None, normalize=False):
     n, m = bpmES.shape  # n = num channels, m = bpm length
 
     if (timesES is None) or (timesGT is None):
@@ -179,9 +192,11 @@ def bpm_diff(bpmES, bpmGT, timesES=None, timesGT=None):
         t = timesES[j]
         i = np.argmin(np.abs(t-timesGT))
         for c in range(n):
-            diff[c, j] = bpmGT[i]-bpmES[c, j]
+            if not normalize:
+                diff[c, j] = bpmGT[i]-bpmES[c, j]
+            else:
+                diff[c, j] = (bpmGT[i]-bpmES[c, j]) / bpmGT[i]
     return diff
-
 
 def concordance_correlation_coefficient(bpm_true, bpm_pred):
     cor=np.corrcoef(bpm_true, bpm_pred)[0][1]
