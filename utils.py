@@ -124,7 +124,7 @@ def get_face_ROI(video_path):
         width = crp.shape[1]
         height = crp.shape[0]
         if width >= height:
-            crp = crp[:, int(width/2)-int(height/2 + 1):int(height/2)+int(width/2), :]
+            crp = crp[:, max(0,int(width/2)-int(height/2 + 1)):int(height/2)+int(width/2), :]
         else:
             crp = crp[int((height-width)):,:,:]
         frames.append(crp)
