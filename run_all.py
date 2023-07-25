@@ -472,34 +472,43 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 		pickle.dump([metrics, method_metrics] , fp)
 		print('> Metrics saved!\n')
 
-def print_metrics(results_dir):
+def print_metrics(results_dir, unique_window=False):
 	from prettytable import PrettyTable
 	from errors import concordance_correlation_coefficient
 
+	if unique_window:
+		print("Considering one window per video\n")
+		fn = 'metrics_1w.pkl'
+	else:
+		print("Considering time windowing per each video\n")
+		fn = 'metrics.pkl'
+
 	# Load the calculated metrics
-	with open(results_dir + 'metrics.pkl', 'rb') as f: 
+	with open(results_dir + fn, 'rb') as f: 
 		metrics, method_metrics = pickle.load(f)
 
 	t = PrettyTable(['Method'] + metrics)
 
 	for method, metrics_value in method_metrics.items():
-		vals = []
-		for i, m in enumerate(metrics):
-			if m == 'dPCC':
-				bpmsEst = np.stack([np.squeeze(metric[i][0]) for metric in metrics_value])
-				bpmsGT = np.stack([np.squeeze(metric[i][1]) for metric in metrics_value])
-				avg = np.corrcoef(bpmsEst, bpmsGT)[0,1]
-				std = 0
-			elif m == 'dCCC':
-				bpmsEst = np.stack([np.squeeze(metric[i][0]) for metric in metrics_value])
-				bpmsGT = np.stack([np.squeeze(metric[i][1]) for metric in metrics_value])
-				avg = concordance_correlation_coefficient(bpmsEst, bpmsGT)
-				std = 0
-			else:
-				avg = np.nanmedian([metric[i] for metric in metrics_value if m != 'BPM'])
-				std = np.nanstd([metric[i] for metric in metrics_value if m != 'BPM'])
 
-			vals.append(f"%.3f (%.2f)" % (float(avg), float(std)))
+		#import code; code.interact(local=locals())
+
+		if unique_window:
+			from errors import RMSEerror, MAEerror, MAPEerror, PearsonCorr, LinCorr
+			bpmsEst = np.stack([np.squeeze(metric[-1][0]) for metric in metrics_value])[np.newaxis,:]
+			bpmsGT = np.stack([np.squeeze(metric[-1][1]) for metric in metrics_value])			
+			rmse = RMSEerror(bpmsEst, bpmsGT)
+			mae = MAEerror(bpmsEst, bpmsGT)
+			mape = MAPEerror(bpmsEst, bpmsGT)
+			pcc = PearsonCorr(bpmsEst, bpmsGT)
+			ccc = LinCorr(bpmsEst, bpmsGT)			
+			vals = [rmse, mae, mape, pcc, ccc]
+		else:
+			vals = []
+			for i, m in enumerate(metrics):
+				avg = np.nanmedian([metric[i] for metric in metrics_value])
+				std = np.nanstd([metric[i] for metric in metrics_value])
+				vals.append(f"%.3f (%.2f)" % (float(avg), float(std)))
 
 		t.add_row([method] + vals)
 
