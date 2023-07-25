@@ -583,7 +583,7 @@ def main(argv):
 	elif what == 1:
 
 		# Define list of metrics to evaluate
-		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC', 'BPM']
+		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC', 'dPCC', 'dCCC']
 
 		evaluate(results_dir, metrics)
 
