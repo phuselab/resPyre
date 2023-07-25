@@ -2,15 +2,13 @@ import numpy as np
 import plotly.graph_objects as go
 
 def getErrors(bpmES, bpmGT, timesES, timesGT, metrics):
-    """ Computes various error/quality measures"""
+    """ Computes various error/quality measures (multiple time windows case)"""
     if type(bpmES) == list:
         bpmES = np.expand_dims(bpmES, axis=0)
     if type(bpmES) == np.ndarray:
         if len(bpmES.shape) == 1:
             bpmES = np.expand_dims(bpmES, axis=0)
-
     err = []
-    
     for m in metrics:
         if m == 'RMSE':
             e = RMSEerror(bpmES, bpmGT, timesES, timesGT)
@@ -24,13 +22,8 @@ def getErrors(bpmES, bpmGT, timesES, timesGT, metrics):
             e = PearsonCorr(bpmES, bpmGT, timesES, timesGT)
         elif m == 'CCC':
             e = LinCorr(bpmES, bpmGT, timesES, timesGT)
-       elif m == 'dPCC':
-            e = [bpmES, bpmGT]
-        elif m == 'dCCC':
-            e = [bpmES, bpmGT]
-
         err.append(e)
-
+    err.append([bpmES, bpmGT])
     return err
 
 
@@ -45,7 +38,7 @@ def RMSEerror(bpmES, bpmGT, timesES=None, timesGT=None):
             df[c] += np.power(diff[c, j], 2)
 
     # -- final RMSE
-    RMSE = float(np.sqrt(df/m))
+    RMSE = round(float(np.sqrt(df/m)),2)
     return RMSE
 
 
@@ -57,7 +50,7 @@ def MAEerror(bpmES, bpmGT, timesES=None, timesGT=None):
     df = np.sum(np.abs(diff), axis=1)
 
     # -- final MAE
-    MAE = df/m
+    MAE = round(float(df/m),2)
     return MAE
 
 def MAPEerror(bpmES, bpmGT, timesES=None, timesGT=None):
@@ -68,7 +61,7 @@ def MAPEerror(bpmES, bpmGT, timesES=None, timesGT=None):
     df = np.sum(np.abs(diff), axis=1)
 
     # -- final MAE
-    MAPE = (df/m) * 100
+    MAPE = round(float((df/m) * 100),2)
     return MAPE
 
 
@@ -100,7 +93,7 @@ def PearsonCorr(bpmES, bpmGT, timesES=None, timesGT=None):
         # -- corr
         r, p = stats.pearsonr(diff[c, :]+bpmES[c, :], bpmES[c, :])
         CC[c] = r
-    return CC
+    return round(float(CC),2)
 
 
 def LinCorr(bpmES, bpmGT, timesES=None, timesGT=None):
@@ -117,7 +110,7 @@ def LinCorr(bpmES, bpmGT, timesES=None, timesGT=None):
         # -- Lin's Concordance Correlation Coefficient
         ccc = concordance_correlation_coefficient(bpmES[c, :], diff[c, :]+bpmES[c, :])
         CCC[c] = ccc
-    return CCC
+    return round(float(CCC),2)
 
 
 def printErrors(RMSE, MAE, MAX, PCC, CCC):
