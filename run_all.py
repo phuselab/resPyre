@@ -383,6 +383,7 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 	method_metrics = {}
 
 	files = utils.sort_nicely(os.listdir(results_dir))
+	ofdeep_models = ['_raft', '_raft_small', '_gma', '_irr_pwc', '_lcv_raft', '_craft']
 
 	for filepath in tqdm(files, desc="Processing files"):
 		tqdm.write("> Processing file %s" % (filepath))
@@ -421,10 +422,18 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 		for i, est in enumerate(data['estimates']):
 
 			cur_method = est['method']
+			if cur_method == 'OF_Deep':
+				cur_method += ofdeep_models[i]
+			elif cur_method == 'OF_Model':
+				cur_method = 'OF_Farneback'
+
 			sig = np.squeeze(est['estimate'])
 
 			if win_size == 'video':
-				ws = len(sig) / fps
+				if sig.ndim == 1:
+					ws = len(sig) / fps
+				else:
+					ws = sig.shape[1] / fps
 			else:
 				ws = win_size
 
@@ -445,7 +454,6 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 			for d in range(filt_sig.shape[0]):
 				# Apply windowing to the estimation
 				sig_win, t_sig = utils.sig_windowing(filt_sig[d,:], fps, ws)
-
 				# Extract estimated RPM
 				sig_rpm.append(utils.sig_to_RPM(sig_win, fps, int(ws/1.5), 0.2, 0.5))
 
@@ -455,8 +463,12 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 
 			method_metrics.setdefault(cur_method, []).append((e))
 
+	if win_size == 'video':
+		fn = 'metrics_1w.pkl'
+	else:
+		fn = 'metrics.pkl'
 	# Save the results of the applied methods
-	with open(results_dir + 'metrics.pkl', 'wb') as fp:
+	with open(results_dir + fn, 'wb') as fp:
 		pickle.dump([metrics, method_metrics] , fp)
 		print('> Metrics saved!\n')
 
