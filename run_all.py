@@ -462,6 +462,7 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 
 def print_metrics(results_dir):
 	from prettytable import PrettyTable
+	from utils import concordance_correlation_coefficient
 
 	# Load the calculated metrics
 	with open(results_dir + 'metrics.pkl', 'rb') as f: 
@@ -472,10 +473,15 @@ def print_metrics(results_dir):
 	for method, metrics_value in method_metrics.items():
 		vals = []
 		for i, m in enumerate(metrics):
-			if m == 'BPM':
+			if m == 'dPCC':
 				bpmsEst = np.stack([np.squeeze(metric[i][0]) for metric in metrics_value])
 				bpmsGT = np.stack([np.squeeze(metric[i][1]) for metric in metrics_value])
 				avg = np.corrcoef(bpmsEst, bpmsGT)[0,1]
+				std = 0
+			elif m == 'dCCC':
+				bpmsEst = np.stack([np.squeeze(metric[i][0]) for metric in metrics_value])
+				bpmsGT = np.stack([np.squeeze(metric[i][1]) for metric in metrics_value])
+				avg = concordance_correlation_coefficient(bpmsEst, bpmsGT)
 				std = 0
 			else:
 				avg = np.nanmedian([metric[i] for metric in metrics_value if m != 'BPM'])
