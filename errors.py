@@ -64,8 +64,8 @@ def MAPEerror(bpmES, bpmGT, timesES=None, timesGT=None):
     df = np.sum(np.abs(diff), axis=1)
 
     # -- final MAE
-    MAE = df/m
-    return MAE
+    MAPE = (df/m) * 100
+    return MAPE
 
 
 def MAXError(bpmES, bpmGT, timesES=None, timesGT=None):
