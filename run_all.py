@@ -399,13 +399,18 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 		# Filter ground truth
 		filt_gt = utils.filter_RW(gt, fs_gt)
 
+		if win_size == 'video':
+			ws = filt_gt.shape[1] / fs_gt
+		else:
+			ws = win_size
+
 		tqdm.write("> Length: %.2f sec" % (len(gt) / int(fs_gt)))
 
 		# Apply windowing to ground truth
-		gt_win, t_gt = utils.sig_windowing(filt_gt, fs_gt, win_size)
+		gt_win, t_gt = utils.sig_windowing(filt_gt, fs_gt, ws)
 
 		# Extract ground truth RPM using Welch with (win_size/1.5)
-		gt_rpm = utils.sig_to_RPM(gt_win, fs_gt, int(win_size/1.5), 0.2, 0.5)
+		gt_rpm = utils.sig_to_RPM(gt_win, fs_gt, int(ws/1.5), 0.2, 0.5)
 
 		# Extract estimation data
 		fps = data['fps']
@@ -414,6 +419,11 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 
 			cur_method = est['method']
 			sig = np.squeeze(est['estimate'])
+
+			if win_size == 'video':
+				ws = len(sig) / fps
+			else:
+				ws = win_size
 
 			if (sig.ndim == 1):
 				sig = sig[np.newaxis,:]
@@ -426,15 +436,15 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 			filt_sig = np.vstack(filt_sig)
 
 			if cur_method in ['bss_emd', 'bss_ssa']:
-				filt_sig = utils.select_component(filt_sig, fps, int(win_size/1.5), 0.2, 0.5)
+				filt_sig = utils.select_component(filt_sig, fps, int(ws/1.5), 0.2, 0.5)
 
 			sig_rpm = []
 			for d in range(filt_sig.shape[0]):
 				# Apply windowing to the estimation
-				sig_win, t_sig = utils.sig_windowing(filt_sig[d,:], fps, win_size)
+				sig_win, t_sig = utils.sig_windowing(filt_sig[d,:], fps, ws)
 
 				# Extract estimated RPM
-				sig_rpm.append(utils.sig_to_RPM(sig_win, fps, int(win_size/1.5), 0.2, 0.5))
+				sig_rpm.append(utils.sig_to_RPM(sig_win, fps, int(ws/1.5), 0.2, 0.5))
 
 			sig_rpm = np.mean(sig_rpm, axis=0)
 
@@ -459,8 +469,14 @@ def print_metrics(results_dir):
 	for method, metrics_value in method_metrics.items():
 		vals = []
 		for i, m in enumerate(metrics):
-			avg = np.nanmedian([metric[i] for metric in metrics_value])
-			std = np.nanstd([metric[i] for metric in metrics_value])
+			if m == 'BPM':
+				bpmsEst = np.stack([np.squeeze(metric[i][0]) for metric in metrics_value])
+				bpmsGT = np.stack([np.squeeze(metric[i][1]) for metric in metrics_value])
+				avg = np.corrcoef(bpmsEst, bpmsGT)[0,1]
+				std = 0
+			else:
+				avg = np.nanmedian([metric[i] for metric in metrics_value if m != 'BPM'])
+				std = np.nanstd([metric[i] for metric in metrics_value if m != 'BPM'])
 
 			vals.append(f"%.3f (%.2f)" % (float(avg), float(std)))
 
@@ -558,7 +574,7 @@ def main(argv):
 	elif what == 1:
 
 		# Define list of metrics to evaluate
-		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC']
+		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC', 'BPM']
 
 		evaluate(results_dir, metrics)
 
