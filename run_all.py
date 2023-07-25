@@ -604,14 +604,14 @@ def main(argv):
 	elif what == 1:
 
 		# Define list of metrics to evaluate
-		metrics = ['RMSE', 'MAE', 'MAPE', 'MAX', 'PCC', 'CCC', 'dPCC', 'dCCC']
+		metrics = ['RMSE', 'MAE', 'MAPE', 'PCC', 'CCC']
 
-		evaluate(results_dir, metrics)
+		evaluate(results_dir, metrics, win_size='video')
 
 	elif what == 2:
 
 		# Just print the metrics values
-		print_metrics(results_dir)
+		print_metrics(results_dir, unique_window=True)
 
 
 if __name__ == "__main__":
