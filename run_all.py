@@ -387,6 +387,9 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 	for filepath in tqdm(files, desc="Processing files"):
 		tqdm.write("> Processing file %s" % (filepath))
 
+		if 'metrics' in filepath:
+			continue
+
 		# Open the file with pickled data
 		file = open(results_dir + filepath, 'rb')
 		data = pickle.load(file)
