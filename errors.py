@@ -24,7 +24,9 @@ def getErrors(bpmES, bpmGT, timesES, timesGT, metrics):
             e = PearsonCorr(bpmES, bpmGT, timesES, timesGT)
         elif m == 'CCC':
             e = LinCorr(bpmES, bpmGT, timesES, timesGT)
-        elif m == 'BPM':
+       elif m == 'dPCC':
+            e = [bpmES, bpmGT]
+        elif m == 'dCCC':
             e = [bpmES, bpmGT]
 
         err.append(e)
