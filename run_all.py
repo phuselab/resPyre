@@ -462,7 +462,7 @@ def evaluate(results_dir, metrics, win_size=30, visualize=False):
 
 def print_metrics(results_dir):
 	from prettytable import PrettyTable
-	from utils import concordance_correlation_coefficient
+	from errors import concordance_correlation_coefficient
 
 	# Load the calculated metrics
 	with open(results_dir + 'metrics.pkl', 'rb') as f: 
