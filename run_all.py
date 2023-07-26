@@ -227,7 +227,7 @@ class OF_Deep(MethodBase):
 
 	def forward(self, inputs):
 		import torch
-		predictions = self.model(inputs)
+		predictions = self.OFmodel(inputs)
 		predictions = self.io_adapter.unpad_and_unscale(predictions)
 		flows = torch.squeeze(predictions['flows'])[:,1,:,:]
 		vert = flows.reshape(flows.shape[0],-1).cpu().detach().numpy()
@@ -246,13 +246,14 @@ class OF_Deep(MethodBase):
 			device = 'cpu'
 		else:
 			device = torch.device("cuda")
-		self.model = ptlflow.get_model(self.model, pretrained_ckpt=self.ckpt)
-		self.model.to(device)
+		self.OFmodel = ptlflow.get_model(self.model, pretrained_ckpt=self.ckpt)
+		self.OFmodel.to(device)
 		s = []
 		newsize = (224, 144)
 		video = [np.array(r.resize(newsize)) for r in data['chest_rois']]
 		nframes = len(video)
 		print("\n> Computing Optical Flow...")
+
 		while True:
 			try:
 				print("\n> Attempting with batch size: " + str(self.batch_size))
@@ -264,7 +265,7 @@ class OF_Deep(MethodBase):
 					end = min(i+self.batch_size, nframes-1)
 					batch = video[start:end]
 					if i == 0:
-						self.io_adapter = IOAdapter(self.model, batch[0].shape[:2], cuda=cuda)
+						self.io_adapter = IOAdapter(self.OFmodel, batch[0].shape[:2], cuda=cuda)
 					inputs = self.io_adapter.prepare_inputs(batch)
 					input_images = inputs["images"][0]
 					video1 = input_images[:-1]
@@ -280,7 +281,7 @@ class OF_Deep(MethodBase):
 				self.batch_size = self.batch_size // 2
 				if self.batch_size < 4:
 					raise ValueError("Batch size is too tiny, maybe need more GPU memory.")
-		del self.model
+		del self.OFmodel
 		torch.cuda.empty_cache()
 		sig = np.concatenate(s)
 		return sig
