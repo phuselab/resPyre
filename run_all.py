@@ -217,7 +217,7 @@ class BigSmall(MethodBase):
 
 class OF_Deep(MethodBase):
 
-	def __init__(self, model, batch_size=16):
+	def __init__(self, model, batch_size=64):
 		super().__init__()
 		self.name = 'OF_Deep' + ' ' + model
 		self.data_type = 'chest'
