@@ -253,25 +253,33 @@ class OF_Deep(MethodBase):
 		video = [np.array(r.resize(newsize)) for r in data['chest_rois']]
 		nframes = len(video)
 		print("\n> Computing Optical Flow...")
-		for i in tqdm(range(0, nframes, self.batch_size)):
-			if i == 0:
-				start = i
-			else:
-				start = i-1
-			end = min(i+self.batch_size, nframes-1)
-			batch = video[start:end]
-			if i == 0:
-				self.io_adapter = IOAdapter(self.model, batch[0].shape[:2], cuda=cuda)
-			inputs = self.io_adapter.prepare_inputs(batch)
-			input_images = inputs["images"][0]
-			video1 = input_images[:-1]
-			video2 = input_images[1:]
-			input_images = torch.stack((video1, video2), dim=1)
-			if cuda:
-				input_images = input_images.cuda()
-			inputs["images"] = input_images
-			vert = self.forward(inputs)
-			s.append(np.median(vert, axis=1))
+		while True:
+			try:
+				print("\n> Attempting with batch size: " + str(self.batch_size))
+				for i in tqdm(range(0, nframes, self.batch_size)):
+					if i == 0:
+						start = i
+					else:
+						start = i-1
+					end = min(i+self.batch_size, nframes-1)
+					batch = video[start:end]
+					if i == 0:
+						self.io_adapter = IOAdapter(self.model, batch[0].shape[:2], cuda=cuda)
+					inputs = self.io_adapter.prepare_inputs(batch)
+					input_images = inputs["images"][0]
+					video1 = input_images[:-1]
+					video2 = input_images[1:]
+					input_images = torch.stack((video1, video2), dim=1)
+					if cuda:
+						input_images = input_images.cuda()
+					inputs["images"] = input_images
+					vert = self.forward(inputs)
+					s.append(np.median(vert, axis=1))
+				break
+			except RuntimeError:
+				self.batch_size = self.batch_size // 2
+				if self.batch_size < 4:
+					raise ValueError("Batch size is too tiny, maybe need more GPU memory.")
 		del self.model
 		torch.cuda.empty_cache()
 		sig = np.concatenate(s)
