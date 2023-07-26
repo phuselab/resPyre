@@ -217,67 +217,65 @@ class BigSmall(MethodBase):
 
 class OF_Deep(MethodBase):
 
-	def __init__(self, model):
+	def __init__(self, model, batch_size=16):
 		super().__init__()
 		self.name = 'OF_Deep' + ' ' + model
 		self.data_type = 'chest'
 		self.model = model
 		self.ckpt = 'things'
+		self.batch_size = batch_size
 
-	def process(self, data):
+	def forward(self, inputs):
+		import torch
+		predictions = self.model(inputs)
+		predictions = self.io_adapter.unpad_and_unscale(predictions)
+		flows = torch.squeeze(predictions['flows'])[:,1,:,:]
+		vert = flows.reshape(flows.shape[0],-1).cpu().detach().numpy()
+		return vert
+	
+	def process(self, data, cuda=True):
 		import ptlflow
 		import torch
 		from PIL import Image
 		from ptlflow.utils import flow_utils
 		from ptlflow.utils.io_adapter import IOAdapter
-
-		model = ptlflow.get_model(self.model, pretrained_ckpt=self.ckpt)
-		device = torch.device("cuda")
-		model.to(device)
-
+		import warnings
+		warnings.filterwarnings("ignore") 
+		if not cuda:
+			torch.cuda.is_available = lambda : False
+			device = 'cpu'
+		else:
+			device = torch.device("cuda")
+		self.model = ptlflow.get_model(self.model, pretrained_ckpt=self.ckpt)
+		self.model.to(device)
 		s = []
-		for i, r in enumerate(data['chest_rois']):
-
-			#hsize = 144
-			#wpercent = hsize/float(r.size[1])
-			#wsize = int((float(r.size[0])*float(wpercent)))
-			newsize = (224, 144)
-
-			r = r.resize(newsize)
-
-			if(i == 0):
-				prev = r
-				io_adapter = IOAdapter(model, prev.size, cuda = True)
-				continue
-
-			curr = r
-
-			images = [
-				prev,
-				curr
-			]
-
-			inputs = io_adapter.prepare_inputs(images)
-
-			predictions = model(inputs)
-			predictions = io_adapter.unpad_and_unscale(predictions)
-
-			flow = predictions['flows'][0,0]
-			flow = flow.permute(2, 1, 0)
-			flow = flow.cpu().detach().numpy()
-
-			vert = flow[...,1].flatten()
-
-			s.append(np.median(vert))
-
-			prev = curr
-
-		s = np.asarray(s)
-
-		del model
+		newsize = (224, 144)
+		video = [np.array(r.resize(newsize)) for r in data['chest_rois']]
+		nframes = len(video)
+		print("\n> Computing Optical Flow...")
+		for i in tqdm(range(0, nframes, self.batch_size)):
+			if i == 0:
+				start = i
+			else:
+				start = i-1
+			end = min(i+self.batch_size, nframes-1)
+			batch = video[start:end]
+			if i == 0:
+				self.io_adapter = IOAdapter(self.model, batch[0].shape[:2], cuda=cuda)
+			inputs = self.io_adapter.prepare_inputs(batch)
+			input_images = inputs["images"][0]
+			video1 = input_images[:-1]
+			video2 = input_images[1:]
+			input_images = torch.stack((video1, video2), dim=1)
+			if cuda:
+				input_images = input_images.cuda()
+			inputs["images"] = input_images
+			vert = self.forward(inputs)
+			s.append(np.median(vert, axis=1))
+		del self.model
 		torch.cuda.empty_cache()
-
-		return s
+		sig = np.concatenate(s)
+		return sig
 
 class OF_Model(MethodBase):
 
