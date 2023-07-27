@@ -264,6 +264,8 @@ class OF_Deep(MethodBase):
 						start = i-1
 					end = min(i+self.batch_size, nframes-1)
 					batch = video[start:end]
+					if len(batch) <= 2:
+						continue
 					if i == 0:
 						self.io_adapter = IOAdapter(self.OFmodel, batch[0].shape[:2], cuda=cuda)
 					inputs = self.io_adapter.prepare_inputs(batch)
