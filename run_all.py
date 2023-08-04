@@ -326,10 +326,11 @@ class DoF(MethodBase):
 
 class profile1D(MethodBase):
 
-	def __init__(self):
+	def __init__(self, interp_type='quadratic'):
 		super().__init__()
-		self.name = 'profile1D'
+		self.name = 'profile1D ' + interp_type 
 		self.data_type = 'chest'
+		self.interp_type = interp_type
 
 	def process(self, data):
 		from motion.motion import profile1D
@@ -339,7 +340,7 @@ class profile1D(MethodBase):
 		g_rois = [cv.cvtColor(np.asarray(x), cv.COLOR_RGB2GRAY) for x in data['chest_rois']];
 
 		# estimate profile1D
-		profile, _ = profile1D(g_rois, data['fps'])
+		profile, _ = profile1D(g_rois, data['fps'], self.interp_type)
 		return profile
 
 # RIV based
