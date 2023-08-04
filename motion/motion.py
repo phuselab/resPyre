@@ -62,7 +62,8 @@ def OF(frames, fps):
     return sig, elapsed
 
 
-def profile1D(frames, fps):
+def profile1D(frames, fps, interp_type):
+    import scipy
     """
         This method applies Bartula et al. algorithm for breath measurement
 
@@ -74,7 +75,9 @@ def profile1D(frames, fps):
         -------
             the estimated respiratory signal
     """
-    print("\nEstimating Respiration Waveform via Correlation of 1D profiles...\n")
+    assert interp_type == 'linear' or interp_type == 'quadratic' or interp_type == 'cubic', "'interp_type' should be 'linear', 'quadratic' or 'cubic'"
+    print("\nEstimating Respiration Waveform via Cross-Correlation of 1D profiles...\n")
+    print("Interpolation type is: " + interp_type + '\n')
     dcp = []    #derivatives of chest position
 
     t = tqdm(frames)
@@ -83,8 +86,15 @@ def profile1D(frames, fps):
         if i == 0:
             prevp = currp 
             continue
-        xcorr = np.correlate(currp, prevp, mode='same')
-        disp = np.max(xcorr)
+
+        #xcorr = np.correlate(currp, prevp, mode='same')
+        xcorr = np.correlate(currp, prevp, mode='full') 
+        f = scipy.interpolate.interp1d(np.arange(xcorr.shape[0]), xcorr, interp_type)
+        xvals = np.linspace(0, xcorr.shape[0]-1, xcorr.shape[0]*100)
+        xcorr_interp = f(xvals)
+
+        #disp = np.max(xcorr)
+        disp = np.argmax(xcorr_interp) / (1./fps)
         dcp.append(disp)
         prevp = currp 
 
