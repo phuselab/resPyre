@@ -1,4 +1,4 @@
-# ResPyre - Respiratory Rate Estimation from Video (resPyre)
+# ResPyre - Respiratory Rate Estimation from Video
 
 This repository contains code for estimating respiratory rate from video using different methods and datasets.
 
