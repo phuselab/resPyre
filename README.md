@@ -1,6 +1,6 @@
-# ResPyre - Respiratory Rate Estimation from Video
+<img width="300" alt="rePyre logo" src="https://github.com/user-attachments/assets/d1775944-ab12-426a-93cb-86c2ba78f1d0" /><br>
 
-This repository contains code for estimating respiratory rate from video using different methods and datasets.
+**resPyre** is a comprehensive framework for estimating respiratory rate from video, using different methods and datasets.
 
 ## Overview
 
@@ -150,6 +150,20 @@ Required packages are listed in [requirements.txt](requirements.txt). Key depend
 - SciPy
 - NumPy
 - Matplotlib
+
+## Reference
+
+If you use this code, please cite the paper:
+
+```
+@article{boccignone2025remote,
+  title={Remote Respiration Measurement with RGB Cameras: A Review and Benchmark},
+  author={Boccignone, Giuseppe and Cuculo, Vittorio and D'Amelio, Alessandro and Grossi, Giuliano and Lanzarotti, Raffaella and Patania, Sabrina},
+  journal={ACM Computing Surveys},
+  year={2025},
+  publisher={ACM New York, NY}
+}
+```
 
 ## License
 
