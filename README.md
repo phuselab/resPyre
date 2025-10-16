@@ -1,4 +1,11 @@
-<img width="300" alt="rePyre logo" src="https://github.com/user-attachments/assets/d1775944-ab12-426a-93cb-86c2ba78f1d0" /><br>
+<div align="center">
+  <img width="300" alt="rePyre logo" src="https://github.com/user-attachments/assets/d1775944-ab12-426a-93cb-86c2ba78f1d0" />
+  <br>
+	<br>
+  
+  [![Paper](https://img.shields.io/badge/Paper-ACM_Computing_Surveys-1975AE?logo=acm)](https://dl.acm.org/doi/10.1145/3771763)
+
+</div>
 
 **resPyre** is a comprehensive framework for estimating respiratory rate from video, using different methods and datasets.
 
